@@ -2,21 +2,26 @@ import serial
 import threading
 import time
 
+#RS485는 half duplex 방식의 통신이므로 송신이 끝나고 그 다음에 바로 수신이 되어야함
+event_lock = threading.Event()
+
 #Buffer for memorizing sensor data
 Data = []
 
 class Laser():
     def __init__(self,com,baudrate):
         self.mySerial = serial.Serial(com,baudrate,timeout = 0,bytesize=serial.EIGHTBITS)
-    def SendData(self):
+    def SendData(self,event_obj):
+        event_obj.wait()
         packet = bytes(bytearray([0x02,0x43,0xB0,0x01,0x03,0xF2]))
         self.mySerial.write(packet)
         print('Send :' + str(packet))
+
     def Setup(self,dataPacket):
         packet = bytes(bytearray(dataPacket))
         self.mySerial.write(packet)
         print('Send :' + str(packet))
-    def RecvData(self):
+    def RecvData(self,event_obj):
         global Buffer
         if self.mySerial.readable():
             A = bytearray(self.mySerial.readline())
@@ -37,6 +42,7 @@ class Laser():
                 Response = ((A[2]) * 256 + (A[3])) * 0.01
             print(A,len(A))
             print('Response: ', Response ,'\n')
+            event_obj.set()
 
 
 if __name__=='__main__':
@@ -44,8 +50,9 @@ if __name__=='__main__':
     A.Setup([0x02,0x43,0xA1,0x01,0x03,0xE3])
     time.sleep(1)
     while True:
-        t1 = threading.Thread(target=A.SendData)
+        t1 = threading.Thread(target=A.SendData,args=(event_lock,))
         t1.start()
-        t2 = threading.Thread(target=A.RecvData)
+        t2 = threading.Thread(target=A.RecvData,args=(event_lock,))
         t2.start()
         time.sleep(0.01)
+
