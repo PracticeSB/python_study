@@ -3,6 +3,7 @@ import threading
 import time
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
+import openpyxl
 from queue import Queue
 
 #RS485는 half duplex 방식의 통신이므로 송신이 끝나고 그 다음에 바로 수신이 되어야함
@@ -14,6 +15,13 @@ Data = []
 Total_time = 0
 Response = 0
 Interval = 0
+Loop_count = 0
+
+#For making excel sheet
+wb = openpyxl.Workbook()
+ws = wb.create_sheet("TEST")  # Name of the sheet
+ws.cell(row=1, column=1, value='Time[Sec]')
+ws.cell(row=1, column=2, value='Displacement[mm]')
 
 # Create figure for plotting
 fig = plt.figure()
@@ -46,7 +54,8 @@ class Laser():
         global Total_time
         global Response
         global Interval
-        while True:
+        global Loop_count
+        while Total_time < 30:
             start_time = time.time()
             flag = q.get()
             if flag == False:
@@ -65,8 +74,10 @@ class Laser():
                     #                 print('Over 6' + Data)
                     if A[2] >= 127:
                         Response = -((255 - (A[2])) * 256 + (255 - A[3])) * 0.01
+                        B_calibration = (Response * 1.18 - 0.16534)
                     else:
                         Response = ((A[2]) * 256 + (A[3])) * 0.01
+                        B_calibration = (Response * 1.18 + 0.16534)
                     #print(A,len(A))
                     #print('Response: ', Response,'\n')
                     #time.sleep(0.05)
@@ -75,7 +86,15 @@ class Laser():
                     #print('Interval', Interval, '\n')
                     Total_time = Total_time + Interval
                     print(Total_time)
+                    Loop_count = Loop_count + 1
+                    ws.cell(row=Loop_count + 2, column=1, value=Total_time)
+                    ws.cell(row=Loop_count + 2, column=2, value=Response)
+                    ws.cell(row=Loop_count + 2, column=3, value=B_calibration)
                     flag = True
+        self.mySerial.write(bytes(bytearray([0x02, 0x43, 0xA1, 0x01, 0x03, 0xE3])))  # release set point
+        time.sleep(1)
+        wb.save(r'C:\Users\user\PycharmProjects\Data\1.csv')
+        print('Data is saved!')
 def animate(i, x, y):
     x.append(Total_time)
     y.append(Response)
