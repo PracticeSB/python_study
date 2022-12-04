@@ -1,12 +1,15 @@
 import serial
 import threading
 import time
+from queue import Queue
 
 #RS485는 half duplex 방식의 통신이므로 송신이 끝나고 그 다음에 바로 수신이 되어야함
 event_lock = threading.Event()
+q = Queue(maxsize=0)
 
 #Buffer for memorizing sensor data
 Data = []
+Total_time = 0
 
 class Laser():
     def __init__(self,com,baudrate):
@@ -22,9 +25,10 @@ class Laser():
         self.mySerial.write(packet)
         print('Send :' + str(packet))
     def RecvData(self,event_obj):
+        start_time = time.time()
         global Buffer
         if self.mySerial.readable():
-            A = bytearray(self.mySerial.readline())
+            A = bytearray(self.mySerial.read(6))
             if len(A) < 6:
                 B = self.mySerial.read(size=6-len(A))
                 A.extend(B)
@@ -41,9 +45,13 @@ class Laser():
             else:
                 Response = ((A[2]) * 256 + (A[3])) * 0.01
             print(A,len(A))
-            print('Response: ', Response ,'\n')
-            event_obj.set()
-
+            print('Response: ', Response,'\n')
+            end_time = time.time()
+            Interval = end_time - start_time
+            #print('Interval',Interval,'\n')
+            q.put(Interval)
+            time.sleep(0.01)
+        event_obj.set()
 
 if __name__=='__main__':
     A = Laser("COM5", 115200)
@@ -51,8 +59,14 @@ if __name__=='__main__':
     time.sleep(1)
     while True:
         t1 = threading.Thread(target=A.SendData,args=(event_lock,))
+        t2 = threading.Thread(target=A.RecvData, args=(event_lock,))
         t1.start()
-        t2 = threading.Thread(target=A.RecvData,args=(event_lock,))
         t2.start()
-        time.sleep(0.01)
+        t1.join()
+        t2.join()
+
+
+
+
+
 
