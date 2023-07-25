@@ -69,19 +69,15 @@ def data_query():
     global Loop_count
     global Value
     global flag
-    while Total_time < 100:
-        if keyboard.is_pressed("a"):
-            Set_point = 10
-        if keyboard.is_pressed("b"):
-            Set_point = 20
-        if keyboard.is_pressed("c"):
-            Set_point = 25
-        if keyboard.is_pressed("d"):
+    while Total_time < 70:
+        if (int(Total_time) >= 0) & (int(Total_time) < 20):
             Set_point = 30
-        if keyboard.is_pressed("e"):
+        elif (int(Total_time) >= 20) & (int(Total_time) < 40):
             Set_point = 40
-        if keyboard.is_pressed("f"):
+        elif (int(Total_time >= 40)) & (int(Total_time) < 60):
             Set_point = 50
+        else:
+            Set_point = 5
         First_start = time.time()
         Source_meter.write('SOURce:VOLT:ILIM 1') #Limitation of the current
         Source_meter.write('OUTPut ON') #Turn the output on
@@ -114,7 +110,7 @@ def data_query():
         ws.cell(row=Loop_count, column=4, value=Delta_r_percentage)
         Loop_count = Loop_count + 1
     Source_meter.write('OUTPUT OFF')
-    wb.save(r'D:\Dropbox\노승범\실험\Application\20230723\Step\Source_Practice1_%d_%0.2f_12cm_c.xlsx' %(Kp,Ki))
+    wb.save(r'D:\Dropbox\노승범\실험\Video\20230723\Source_Practice1_%d_%0.2f_8cm_c.xlsx' %(Kp,Ki))
     print('Data is saved')
 #######################################################
 def animate(i, x, y,y1,y2):
@@ -141,7 +137,7 @@ def animate(i, x, y,y1,y2):
     plt.xlabel('Time(Sec)')
 ####################################################### Setting of the equipment
 rm = pyvisa.ResourceManager()
-Source_meter = rm.open_resource('TCPIP0::169.254.113.194::inst0::INSTR') #LAN communication address
+Source_meter = rm.open_resource('TCPIP0::169.254.51.52::inst0::INSTR') #LAN communication address
 print(rm.list_opened_resources()) #For checking the address
 print(Source_meter.query("*IDN?")) #For checking the response
 Source_meter.write('*LANG SCPI')
